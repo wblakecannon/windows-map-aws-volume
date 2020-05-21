@@ -1,0 +1,53 @@
+{
+    "builders": [
+        {
+            "profile": "caprinomics",
+            "region": "us-west-2",
+            "type": "amazon-ebs",
+            "source_ami_filter": {
+                "filters": {
+                    "virtualization-type": "hvm",
+                    "name": "Windows_Server-2016-English-Full-Base*",
+                    "root-device-type": "ebs"
+                },
+                "owners": ["amazon"],
+                "most_recent": true
+            },
+            "ami_name": "Windows-with-D-{{timestamp}}",
+            "user_data_file": "./scripts/SetUpWinRM.ps1",
+            "instance_type": "t2.micro",
+            "communicator": "winrm",
+            "winrm_port": 5986,
+            "winrm_timeout": "15m",
+            "winrm_use_ssl": true,
+            "winrm_insecure": true,
+            "winrm_username": "Administrator",
+            "tags": {
+                "Name": "Windows-with-D:",
+                "Packer": "true"
+            },
+            "run_tags": {
+                "Name": "Windows-with-D:",
+                "Packer": "true"
+            },
+            "launch_block_device_mappings": [
+                {
+                    "device_name": "xvdb",
+                    "volume_size": 500,
+                    "volume_type": "gp2",
+                    "delete_on_termination": true
+                }
+            ]
+        }
+    ],
+    "provisioners": [
+        {
+            "type": "powershell",
+            "inline": [
+                "C:/ProgramData/Amazon/EC2-Windows/Launch/Scripts/InitializeInstance.ps1 -Schedule",
+                "C:/ProgramData/Amazon/EC2-Windows/Launch/Scripts/SysprepInstance.ps1 -NoShutdown",
+                "Get-Disk | where partitionstyle -eq \"raw\" | Initialize-Disk -PartitionStyle GPT -PassThru | New-Partition -AssignDriveLetter -UseMaximumSize | Format-Volume -FileSystem NTFS -NewFileSystemLabel \"Data Drive\" -Confirm:$false"
+            ]
+        }
+    ]
+}
